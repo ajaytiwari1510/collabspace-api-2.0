@@ -8,6 +8,7 @@ import collegeRoutes from "./routes/college.route.js";
 import profileRoutes from "./routes/profile.route.js";
 import connectionRoutes from "./routes/connection.route.js";
 import postRoutes from "./routes/post.route.js";
+import projectRoutes from "./routes/project.route.js";
 import { errorHandler } from "./middlewares/errorHandler.middleware.js";
 
 const app: Application = express();
@@ -19,6 +20,9 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Project 
+app.use("/api/projects", projectRoutes);
 
 // Posts
 app.use("/api/posts", postRoutes);
@@ -36,7 +40,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/auth", authRoutes);
 
 // Health check
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.status(200).json({ status: "OK", message: "Server is healthy" });
 });
 
