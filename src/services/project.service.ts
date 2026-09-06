@@ -2,6 +2,10 @@ import { Project } from "../models/project.model.js";
 import { ProjectJoinRequest } from "../models/projectJoinRequest.model.js";
 import { ApiError } from "../utils/apiError.util.js";
 import type { CreateProjectInput } from "../validators/project.validator.js";
+import { createNotification } from "./notification.service.js";
+import { User } from "../models/user.model.js";
+import { escapeRegex } from "../utils/regex.util.js";
+
 
 export const createProject = async (userId: string, input: CreateProjectInput) => {
   const project = await Project.create({
@@ -36,6 +40,18 @@ export const requestToJoin = async (projectId: string, userId: string) => {
   }
 
   const request = await ProjectJoinRequest.create({ projectId, userId });
+
+  // NAYA CODE - Owner ko notify karo
+  const requester = await User.findById(userId);
+  await createNotification({
+    receiverId: project.createdBy.toString(),
+    senderId: userId,
+    type: "project_join_request",
+    message: `${requester?.name} requested to join your project "${project.title}"`,
+    refId: project._id.toString(),
+    refModel: "Project",
+  });
+
   return request;
 };
 
@@ -65,6 +81,17 @@ export const acceptJoinRequest = async (requestId: string, ownerId: string) => {
   }
 
   await project.save();
+
+  // NAYA CODE - Requester ko notify karo (delete se PEHLE, kyunki humein request.userId chahiye)
+  await createNotification({
+    receiverId: request.userId.toString(),
+    senderId: ownerId,
+    type: "project_request_accepted",
+    message: `Your request to join "${project.title}" was accepted`,
+    refId: project._id.toString(),
+    refModel: "Project",
+  });
+
   await ProjectJoinRequest.findByIdAndDelete(requestId);
 
   return project;
@@ -84,6 +111,16 @@ export const rejectJoinRequest = async (requestId: string, ownerId: string) => {
   if (project.createdBy.toString() !== ownerId) {
     throw new ApiError(403, "Only the project owner can reject requests");
   }
+
+  // NAYA CODE - Requester ko notify karo (delete se PEHLE)
+  await createNotification({
+    receiverId: request.userId.toString(),
+    senderId: ownerId,
+    type: "project_request_rejected",
+    message: `Your request to join "${project.title}" was declined`,
+    refId: project._id.toString(),
+    refModel: "Project",
+  });
 
   await ProjectJoinRequest.findByIdAndDelete(requestId);
   return { message: "Join request rejected" };
@@ -147,6 +184,17 @@ export const removeMember = async (projectId: string, memberIdToRemove: string, 
   }
 
   await project.save();
+
+  // NAYA CODE - Removed member ko notify karo
+  await createNotification({
+    receiverId: memberIdToRemove,
+    senderId: ownerId,
+    type: "removed_from_project",
+    message: `You were removed from the project "${project.title}"`,
+    refId: project._id.toString(),
+    refModel: "Project",
+  });
+
   return { message: "Member removed successfully" };
 };
 
@@ -159,7 +207,10 @@ export const discoverProjects = async (
 
   const query: Record<string, unknown> = { status: "open" };
   if (skillFilter) {
-    query.skillsNeeded = { $regex: skillFilter, $options: "i" };
+    query.skillsNeeded = {
+    $regex: escapeRegex(skillFilter),
+    $options: "i",
+    };
   }
 
   const projects = await Project.find(query)
@@ -212,6 +263,7 @@ export const transferOwnership = async (
   newOwnerId: string
 ) => {
   const project = await Project.findById(projectId);
+
   if (!project) {
     throw new ApiError(404, "Project not found");
   }
@@ -220,26 +272,48 @@ export const transferOwnership = async (
     throw new ApiError(403, "Only the current owner can transfer ownership");
   }
 
+  // You cannot transfer ownership to yourself.
+  if (currentOwnerId === newOwnerId) {
+    throw new ApiError(400, "You are already the owner of this project");
+  }
+
   const newOwnerMember = project.members.find(
     (m) => m.userId.toString() === newOwnerId
   );
+
   if (!newOwnerMember) {
-    throw new ApiError(400, "The new owner must be an existing member of the project");
+    throw new ApiError(
+      400,
+      "The new owner must be an existing member of the project"
+    );
   }
 
   project.members = project.members.map((m) => {
     if (m.userId.toString() === currentOwnerId) {
       return { ...m, role: "member" as const };
     }
+
     if (m.userId.toString() === newOwnerId) {
       return { ...m, role: "owner" as const };
     }
+
     return m;
   });
 
   project.createdBy = newOwnerMember.userId;
 
   await project.save();
+
+  // Notify the new owner after successful transfer.
+  await createNotification({
+    receiverId: newOwnerId,
+    senderId: currentOwnerId,
+    type: "ownership_transferred",
+    message: `You are now the owner of the project "${project.title}"`,
+    refId: project._id.toString(),
+    refModel: "Project",
+  });
+
   return project;
 };
 

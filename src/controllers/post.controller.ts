@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { getPaginationParams } from "../utils/pagination.util.js";
 import { asyncHandler } from "../utils/asyncHandler.util.js";
 import {
   createPost,
@@ -7,7 +8,7 @@ import {
   deletePost,
 } from "../services/post.service.js";
 import { createPostSchema } from "../validators/post.validator.js";
-import { ApiError } from "../utils/apiError.util.js";
+import { getParam } from "../utils/getParam.util.js";
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -25,8 +26,7 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const feed = asyncHandler(async (req: Request, res: Response) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
+  const { page, limit } = getPaginationParams(req.query.page, req.query.limit);
 
   const result = await getFeed(page, limit);
 
@@ -37,15 +37,10 @@ export const feed = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const userPosts = asyncHandler(async (req: Request, res: Response) => {
-  const targetUserId = req.params.userId;
+  const targetUserId = getParam(req.params.userId, "User ID");
   const viewerId = req.user!.userId;
 
-  if (!targetUserId || typeof targetUserId !== "string") {
-    throw new ApiError(400, "User ID is required");
-  }
-
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
+  const { page, limit } = getPaginationParams(req.query.page, req.query.limit);
 
   const result = await getUserPosts(targetUserId, viewerId, page, limit);
 
@@ -57,11 +52,7 @@ export const userPosts = asyncHandler(async (req: Request, res: Response) => {
 
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const postId = req.params.id;
-
-  if (!postId || typeof postId !== "string") {
-    throw new ApiError(400, "Post ID is required");
-  }
+  const postId = getParam(req.params.id, "Post ID");
 
   const result = await deletePost(postId, userId);
 

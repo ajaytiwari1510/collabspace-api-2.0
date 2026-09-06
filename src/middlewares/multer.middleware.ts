@@ -1,4 +1,5 @@
 import multer from "multer";
+import { ApiError } from "../utils/apiError.util.js";
 
 const storage = multer.memoryStorage();
 
@@ -12,7 +13,7 @@ const fileFilter = (
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPEG, PNG, and WebP images are allowed"));
+    cb(new ApiError(400, "Only JPEG, PNG, and WebP images are allowed"));
   }
 };
 

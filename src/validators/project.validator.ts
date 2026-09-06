@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { objectIdSchema } from "./common.validator.js";
 
 export const createProjectSchema = z.object({
   title: z.string().trim().min(3, "Title too short").max(100, "Title too long"),
@@ -11,3 +12,22 @@ export const createProjectSchema = z.object({
 });
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
+
+export const discoverProjectSchema = z.object({
+  skill: z
+    .string()
+    .trim()
+    .min(1, "Skill cannot be empty")
+    .max(50, "Skill too long")
+    .optional(),
+});
+
+export type DiscoverProjectInput = z.infer<typeof discoverProjectSchema>;
+
+
+export const transferOwnershipSchema = z.object({
+  newOwnerId: objectIdSchema,
+});
+
+export type TransferOwnershipInput = z.infer<typeof transferOwnershipSchema>;

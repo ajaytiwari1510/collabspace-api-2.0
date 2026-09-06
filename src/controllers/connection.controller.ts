@@ -7,8 +7,9 @@ import {
   getMyConnections,
   getPendingRequests,
 } from "../services/connection.service.js";
-import { ApiError } from "../utils/apiError.util.js";
 import { sendConnectionRequestSchema } from "../validators/connection.validator.js";
+import { getParam } from "../utils/getParam.util.js";
+
 
 export const sendRequest = asyncHandler(async (req: Request, res: Response) => {
   const senderId = req.user!.userId;
@@ -25,11 +26,7 @@ export const sendRequest = asyncHandler(async (req: Request, res: Response) => {
 
 export const acceptRequest = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const connectionId = req.params.id;
-
-  if (!connectionId || typeof connectionId !== "string") {
-    throw new ApiError(400, "Connection ID is required");
-  }
+  const connectionId = getParam(req.params.id, "Connection ID");
 
   const connection = await acceptConnectionRequest(connectionId, userId);
 
@@ -42,11 +39,7 @@ export const acceptRequest = asyncHandler(async (req: Request, res: Response) =>
 
 export const rejectRequest = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const connectionId = req.params.id;
-
-  if (!connectionId || typeof connectionId !== "string") {
-    throw new ApiError(400, "Connection ID is required");
-  }
+  const connectionId = getParam(req.params.id, "Connection ID");
 
   const result = await rejectConnectionRequest(connectionId, userId);
 

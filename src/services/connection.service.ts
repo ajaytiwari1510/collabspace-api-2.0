@@ -1,6 +1,8 @@
 import { Connection } from "../models/connection.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/apiError.util.js";
+import { createNotification } from "./notification.service.js";
+
 
 export const sendConnectionRequest = async (senderId: string, receiverId: string) => {
   // Step 1: Khud ko request nahi bhej sakte
@@ -36,6 +38,17 @@ export const sendConnectionRequest = async (senderId: string, receiverId: string
     status: "pending",
   });
 
+  // NAYA CODE - notification bhejo
+  const sender = await User.findById(senderId);
+  await createNotification({
+    receiverId,
+    senderId,
+    type: "connection_request",
+    message: `${sender?.name} sent you a connection request`,
+    refId: connection._id.toString(),
+    refModel: "Connection",
+  });
+
   return connection;
 };
 
@@ -56,6 +69,17 @@ export const acceptConnectionRequest = async (connectionId: string, userId: stri
 
   connection.status = "accepted";
   await connection.save();
+
+  // NAYA CODE - notification bhejo original sender ko
+  const accepter = await User.findById(userId);
+  await createNotification({
+    receiverId: connection.senderId.toString(),
+    senderId: userId,
+    type: "connection_accepted",
+    message: `${accepter?.name} accepted your connection request`,
+    refId: connection._id.toString(),
+    refModel: "Connection",
+  });
 
   return connection;
 };

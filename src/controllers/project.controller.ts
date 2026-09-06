@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
+import { getPaginationParams } from "../utils/pagination.util.js";
 import { asyncHandler } from "../utils/asyncHandler.util.js";
-import { ApiError } from "../utils/apiError.util.js";
-import { createProjectSchema } from "../validators/project.validator.js";
+import { createProjectSchema, 
+        discoverProjectSchema,
+      } from "../validators/project.validator.js";
+import { getParam } from "../utils/getParam.util.js";
 import {
   createProject,
   requestToJoin,
@@ -16,12 +19,6 @@ import {
   deleteProject,
 } from "../services/project.service.js";
 
-const getParam = (value: unknown, name: string): string => {
-  if (!value || typeof value !== "string") {
-    throw new ApiError(400, `${name} is required`);
-  }
-  return value;
-};
 
 export const create = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -33,9 +30,8 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const discover = asyncHandler(async (req: Request, res: Response) => {
-  const page = Number(req.query.page) || 1;
-  const limit = Number(req.query.limit) || 10;
-  const skill = typeof req.query.skill === "string" ? req.query.skill : undefined;
+  const { page, limit } = getPaginationParams(req.query.page, req.query.limit);
+  const { skill } = discoverProjectSchema.parse(req.query);
 
   const result = await discoverProjects(page, limit, skill);
 
@@ -108,10 +104,6 @@ export const transfer = asyncHandler(async (req: Request, res: Response) => {
   const currentOwnerId = req.user!.userId;
   const projectId = getParam(req.params.id, "Project ID");
   const { newOwnerId } = req.body;
-
-  if (!newOwnerId || typeof newOwnerId !== "string") {
-    throw new ApiError(400, "newOwnerId is required");
-  }
 
   const project = await transferOwnership(projectId, currentOwnerId, newOwnerId);
 
