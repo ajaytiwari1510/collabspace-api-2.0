@@ -5,6 +5,7 @@ import {
   registerUser,
   loginUser,
   logoutUser,
+  getCurrentUser,
 } from "../services/auth.service.js";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/apiError.util.js";
@@ -76,5 +77,19 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "Logged out successfully",
+  });
+});
+
+export const me = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+
+  const user = await getCurrentUser(userId);
+
+  res.status(200).json({
+    success: true,
+    message: "Current user fetched successfully",
+    data: {
+      user,
+    },
   });
 });
