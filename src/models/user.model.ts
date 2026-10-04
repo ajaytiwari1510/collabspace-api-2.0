@@ -1,10 +1,9 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Step 1: TypeScript interface - batata hai User document ka shape kya hai
 export interface IUser extends Document {
   name: string;
   email: string;
-  passwordHash?: string; // optional - Google auth users ke paas nahi hoga
+  passwordHash?: string; // Optional for Google auth users.
   role: "user" | "admin";
   isVerified: boolean;
   isBanned: boolean;
@@ -18,7 +17,6 @@ export interface IUser extends Document {
   updatedAt: Date;
 }
 
-// Step 2: Mongoose schema - runtime pe enforce karega yeh rules
 const userSchema = new Schema<IUser>(
   {
     name: {
@@ -37,7 +35,7 @@ const userSchema = new Schema<IUser>(
     },
     passwordHash: {
       type: String,
-      select: false, // API response me kabhi nahi aayega by default
+      select: false, // Excluded from queries by default.
     },
     role: {
       type: String,
@@ -76,12 +74,8 @@ const userSchema = new Schema<IUser>(
     },
   },
   {
-    timestamps: true, // automatically createdAt aur updatedAt add karta hai
+    timestamps: true, // Adds createdAt and updatedAt automatically.
   }
 );
 
-// Step 3: Index - fast lookup ke liye email par
-// userSchema.index({ email: 1 }); We already have the "unique: true in email"
-
-// Step 4: Model export - is se hum User.create(), User.findOne() etc. karenge
 export const User = mongoose.model<IUser>("User", userSchema);

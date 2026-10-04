@@ -5,22 +5,19 @@ import { ApiError } from "../utils/apiError.util.js";
 import mongoose from "mongoose";
 
 export const startConversation = async (userId: string, otherUserId: string) => {
-  // 1. User cannot create a conversation with himself
   if (userId === otherUserId) {
     throw new ApiError(400, "You cannot start a conversation with yourself");
   }
 
-  // 2. The other user must exist
   const otherUser = await User.findById(otherUserId);
 
   if (!otherUser) {
     throw new ApiError(404, "User not found");
   }
 
-  // 3. Sort users so A-B and B-A represent the same pair
+  // Sort users so A-B and B-A represent the same pair.
   const sortedParticipants = [userId, otherUserId].sort();
 
-  // 4. First check whether the conversation already exists
   const existingConversation = await Conversation.findOne({
     isGroup: false,
     participants: { $all: sortedParticipants, $size: 2 },
@@ -30,7 +27,6 @@ export const startConversation = async (userId: string, otherUserId: string) => 
     return existingConversation;
   }
 
-  // 5. If it doesn't exist, create a new conversation
   const conversation = await Conversation.create({
     participants: sortedParticipants,
     isGroup: false,
@@ -40,7 +36,11 @@ export const startConversation = async (userId: string, otherUserId: string) => 
   return conversation;
 };
 
-export const getMyConversations = async (userId: string, page: number, limit: number) => {
+export const getMyConversations = async (
+  userId: string,
+  page: number,
+  limit: number
+) => {
   const skip = (page - 1) * limit;
 
   const conversations = await Conversation.find({
@@ -48,7 +48,7 @@ export const getMyConversations = async (userId: string, page: number, limit: nu
     deletedBy: { $ne: userId },
   })
     .select("-deletedBy")
-    .sort({ updatedAt: -1 })
+    .sort({ updatedAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("participants", "name")
@@ -77,6 +77,7 @@ export const getMessages = async (
   limit: number
 ) => {
   const conversation = await Conversation.findById(conversationId);
+
   if (!conversation) {
     throw new ApiError(404, "Conversation not found");
   }
@@ -84,19 +85,26 @@ export const getMessages = async (
   const isParticipant = conversation.participants.some(
     (p) => p.toString() === userId
   );
+
   if (!isParticipant) {
     throw new ApiError(403, "You are not a participant of this conversation");
   }
 
   const skip = (page - 1) * limit;
 
-  const messages = await Message.find({ conversationId, isDeleted: false })
-    .sort({ createdAt: -1 })
+  const messages = await Message.find({
+    conversationId,
+    isDeleted: false,
+  })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("senderId", "name");
 
-  const total = await Message.countDocuments({ conversationId, isDeleted: false });
+  const total = await Message.countDocuments({
+    conversationId,
+    isDeleted: false,
+  });
 
   return {
     messages: messages.reverse(),
@@ -109,8 +117,12 @@ export const getMessages = async (
   };
 };
 
-export const hideConversation = async (conversationId: string, userId: string) => {
+export const hideConversation = async (
+  conversationId: string,
+  userId: string
+) => {
   const conversation = await Conversation.findById(conversationId);
+
   if (!conversation) {
     throw new ApiError(404, "Conversation not found");
   }
@@ -118,6 +130,7 @@ export const hideConversation = async (conversationId: string, userId: string) =
   const isParticipant = conversation.participants.some(
     (p) => p.toString() === userId
   );
+
   if (!isParticipant) {
     throw new ApiError(403, "You are not a participant of this conversation");
   }
@@ -177,9 +190,14 @@ export const deleteMessage = async (messageId: string, userId: string) => {
 export const sendMessage = async (
   conversationId: string,
   senderId: string,
-  data: { text?: string; imageUrl?: string; messageType: "text" | "image" | "text_image" }
+  data: {
+    text?: string;
+    imageUrl?: string;
+    messageType: "text" | "image" | "text_image";
+  }
 ) => {
   const conversation = await Conversation.findById(conversationId);
+
   if (!conversation) {
     throw new ApiError(404, "Conversation not found");
   }
@@ -187,6 +205,7 @@ export const sendMessage = async (
   const isParticipant = conversation.participants.some(
     (p) => p.toString() === senderId
   );
+
   if (!isParticipant) {
     throw new ApiError(403, "You are not a participant of this conversation");
   }
@@ -216,6 +235,10 @@ export const sendMessage = async (
         senderId: message.senderId,
         sentAt: message.createdAt,
       };
+
+      // A new message makes the conversation visible again.
+      conversation.deletedBy = [];
+
       await conversation.save({ session });
 
       populatedMessage = await message.populate("senderId", "name");
@@ -228,11 +251,18 @@ export const sendMessage = async (
     .map((p) => p.toString())
     .filter((id) => id !== senderId);
 
-  return { message: populatedMessage, recipientIds };
+  return {
+    message: populatedMessage,
+    recipientIds,
+  };
 };
 
-export const markMessagesAsRead = async (conversationId: string, userId: string) => {
+export const markMessagesAsRead = async (
+  conversationId: string,
+  userId: string
+) => {
   const conversation = await Conversation.findById(conversationId);
+
   if (!conversation) {
     throw new ApiError(404, "Conversation not found");
   }
@@ -240,6 +270,7 @@ export const markMessagesAsRead = async (conversationId: string, userId: string)
   const isParticipant = conversation.participants.some(
     (p) => p.toString() === userId
   );
+
   if (!isParticipant) {
     throw new ApiError(403, "You are not a participant of this conversation");
   }

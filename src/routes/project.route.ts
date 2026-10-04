@@ -18,7 +18,6 @@ import { transferOwnershipSchema } from "../validators/project.validator.js";
 
 const router = Router();
 
-// Zaroori: Specific/fixed routes, dynamic (:id) routes se PEHLE
 router.get("/discover", protect, discover);
 router.get("/my", protect, myProjects);
 

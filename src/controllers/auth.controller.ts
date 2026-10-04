@@ -1,8 +1,11 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.util.js";
-import { refreshAccessToken } from "../services/auth.service.js";
-import { registerUser, loginUser } from "../services/auth.service.js";
-import { logoutUser } from "../services/auth.service.js";
+import {
+  refreshAccessToken,
+  registerUser,
+  loginUser,
+  logoutUser,
+} from "../services/auth.service.js";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/apiError.util.js";
 
@@ -14,7 +17,7 @@ const REFRESH_TOKEN_COOKIE_OPTIONS = {
 };
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
-  const result = await registerUser(req.body); // ab directly req.body, kyunki middleware ne already validate/clean kar diya
+  const result = await registerUser(req.body);
 
   res.cookie("refreshToken", result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
 
@@ -60,7 +63,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId; // "!" batata hai TypeScript ko - hume pata hai yeh defined hoga (protect middleware ke baad)
+  const userId = req.user!.userId;
 
   await logoutUser(userId);
 

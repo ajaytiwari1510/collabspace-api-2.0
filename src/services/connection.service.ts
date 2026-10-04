@@ -3,20 +3,20 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/apiError.util.js";
 import { createNotification } from "./notification.service.js";
 
-
-export const sendConnectionRequest = async (senderId: string, receiverId: string) => {
-  // Step 1: Khud ko request nahi bhej sakte
+export const sendConnectionRequest = async (
+  senderId: string,
+  receiverId: string
+) => {
   if (senderId === receiverId) {
     throw new ApiError(400, "You cannot send a connection request to yourself");
   }
 
-  // Step 2: Receiver exist karta hai kya
   const receiver = await User.findById(receiverId);
+
   if (!receiver) {
     throw new ApiError(404, "User not found");
   }
 
-  // Step 3: Bidirectional duplicate check
   const existingConnection = await Connection.findOne({
     $or: [
       { senderId, receiverId },
@@ -28,18 +28,21 @@ export const sendConnectionRequest = async (senderId: string, receiverId: string
     if (existingConnection.status === "accepted") {
       throw new ApiError(400, "You are already connected with this user");
     }
-    throw new ApiError(400, "A connection request already exists between you and this user");
+
+    throw new ApiError(
+      400,
+      "A connection request already exists between you and this user"
+    );
   }
 
-  // Step 4: Naya connection banao
   const connection = await Connection.create({
     senderId,
     receiverId,
     status: "pending",
   });
 
-  // NAYA CODE - notification bhejo
   const sender = await User.findById(senderId);
+
   await createNotification({
     receiverId,
     senderId,
@@ -52,7 +55,10 @@ export const sendConnectionRequest = async (senderId: string, receiverId: string
   return connection;
 };
 
-export const acceptConnectionRequest = async (connectionId: string, userId: string) => {
+export const acceptConnectionRequest = async (
+  connectionId: string,
+  userId: string
+) => {
   const connection = await Connection.findById(connectionId);
 
   if (!connection) {
@@ -70,8 +76,8 @@ export const acceptConnectionRequest = async (connectionId: string, userId: stri
   connection.status = "accepted";
   await connection.save();
 
-  // NAYA CODE - notification bhejo original sender ko
   const accepter = await User.findById(userId);
+
   await createNotification({
     receiverId: connection.senderId.toString(),
     senderId: userId,
@@ -84,7 +90,10 @@ export const acceptConnectionRequest = async (connectionId: string, userId: stri
   return connection;
 };
 
-export const rejectConnectionRequest = async (connectionId: string, userId: string) => {
+export const rejectConnectionRequest = async (
+  connectionId: string,
+  userId: string
+) => {
   const connection = await Connection.findById(connectionId);
 
   if (!connection) {
@@ -93,6 +102,10 @@ export const rejectConnectionRequest = async (connectionId: string, userId: stri
 
   if (connection.receiverId.toString() !== userId) {
     throw new ApiError(403, "You are not authorized to reject this request");
+  }
+
+  if (connection.status !== "pending") {
+    throw new ApiError(400, "This request has already been processed");
   }
 
   await Connection.findByIdAndDelete(connectionId);
@@ -108,7 +121,7 @@ export const getMyConnections = async (userId: string) => {
     .populate("senderId", "name")
     .populate("receiverId", "name");
 
-  // Har connection se sirf "OTHER user" nikaalo, dono nahi
+  // Return only the other participant from each connection.
   const formattedConnections = connections.map((conn) => {
     const isSender = conn.senderId._id.toString() === userId;
     const otherUser = isSender ? conn.receiverId : conn.senderId;
@@ -132,7 +145,10 @@ export const getPendingRequests = async (userId: string) => {
   return requests;
 };
 
-export const areUsersConnected = async (userIdA: string, userIdB: string): Promise<boolean> => {
+export const areUsersConnected = async (
+  userIdA: string,
+  userIdB: string
+): Promise<boolean> => {
   const connection = await Connection.findOne({
     $or: [
       { senderId: userIdA, receiverId: userIdB },

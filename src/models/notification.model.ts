@@ -1,14 +1,17 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type NotificationType =
-  | "connection_request"
-  | "connection_accepted"
-  | "project_join_request"
-  | "project_request_accepted"
-  | "project_request_rejected"
-  | "removed_from_project"
-  | "ownership_transferred"
-  | "post_liked";
+export const NOTIFICATION_TYPES = [
+  "connection_request",
+  "connection_accepted",
+  "project_join_request",
+  "project_request_accepted",
+  "project_request_rejected",
+  "removed_from_project",
+  "ownership_transferred",
+  "post_liked",
+] as const;
+
+export type NotificationType = typeof NOTIFICATION_TYPES[number];
 
 export interface INotification extends Document {
   receiverId: Types.ObjectId;
@@ -37,16 +40,7 @@ const notificationSchema = new Schema<INotification>(
 
     type: {
       type: String,
-      enum: [
-        "connection_request",
-        "connection_accepted",
-        "project_join_request",
-        "project_request_accepted",
-        "project_request_rejected",
-        "removed_from_project",
-        "ownership_transferred",
-        "post_liked",
-      ],
+      enum: NOTIFICATION_TYPES,
       required: true,
     },
 

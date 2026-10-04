@@ -41,7 +41,6 @@ export const requestToJoin = async (projectId: string, userId: string) => {
 
   const request = await ProjectJoinRequest.create({ projectId, userId });
 
-  // NAYA CODE - Owner ko notify karo
   const requester = await User.findById(userId);
   await createNotification({
     receiverId: project.createdBy.toString(),
@@ -82,7 +81,6 @@ export const acceptJoinRequest = async (requestId: string, ownerId: string) => {
 
   await project.save();
 
-  // NAYA CODE - Requester ko notify karo (delete se PEHLE, kyunki humein request.userId chahiye)
   await createNotification({
     receiverId: request.userId.toString(),
     senderId: ownerId,
@@ -112,7 +110,6 @@ export const rejectJoinRequest = async (requestId: string, ownerId: string) => {
     throw new ApiError(403, "Only the project owner can reject requests");
   }
 
-  // NAYA CODE - Requester ko notify karo (delete se PEHLE)
   await createNotification({
     receiverId: request.userId.toString(),
     senderId: ownerId,
@@ -185,7 +182,6 @@ export const removeMember = async (projectId: string, memberIdToRemove: string, 
 
   await project.save();
 
-  // NAYA CODE - Removed member ko notify karo
   await createNotification({
     receiverId: memberIdToRemove,
     senderId: ownerId,
@@ -214,7 +210,7 @@ export const discoverProjects = async (
   }
 
   const projects = await Project.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("createdBy", "name");
@@ -272,7 +268,6 @@ export const transferOwnership = async (
     throw new ApiError(403, "Only the current owner can transfer ownership");
   }
 
-  // You cannot transfer ownership to yourself.
   if (currentOwnerId === newOwnerId) {
     throw new ApiError(400, "You are already the owner of this project");
   }
@@ -304,7 +299,6 @@ export const transferOwnership = async (
 
   await project.save();
 
-  // Notify the new owner after successful transfer.
   await createNotification({
     receiverId: newOwnerId,
     senderId: currentOwnerId,

@@ -29,7 +29,7 @@ export const getFeed = async (page: number, limit: number) => {
   const skip = (page - 1) * limit;
 
   const posts = await Post.find({ isDeleted: false })
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("userId", "name");
@@ -70,15 +70,12 @@ export const getUserPosts = async (
   page: number,
   limit: number
 ) => {
-  // Step 1: Agar apne khud ke posts dekh raha hai, hamesha allow karo
   const isSelf = targetUserId === viewerId;
 
   if (!isSelf) {
-    // Step 2: Target ka profile check karo
     const targetProfile = await Profile.findOne({ userId: targetUserId });
 
     if (targetProfile && !targetProfile.isPublic) {
-      // Step 3: Private hai - connection check karo
       const connected = await areUsersConnected(viewerId, targetUserId);
 
       if (!connected) {
@@ -87,16 +84,21 @@ export const getUserPosts = async (
     }
   }
 
-  // Step 4: Ab normal posts fetch karo
   const skip = (page - 1) * limit;
 
-  const posts = await Post.find({ userId: targetUserId, isDeleted: false })
-    .sort({ createdAt: -1 })
+  const posts = await Post.find({
+    userId: targetUserId,
+    isDeleted: false,
+  })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("userId", "name");
 
-  const total = await Post.countDocuments({ userId: targetUserId, isDeleted: false });
+  const total = await Post.countDocuments({
+    userId: targetUserId,
+    isDeleted: false,
+  });
 
   return {
     posts,

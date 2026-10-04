@@ -9,7 +9,7 @@ interface CreateNotificationInput {
     type: NotificationType;
     message: string;
     refId?: string;
-    refModel?: "Connection" | "Project" | "ProjectJoinRequest";
+    refModel?: "Connection" | "Project" | "ProjectJoinRequest" | "Post";
 }
 
 export const createNotification = async (input: CreateNotificationInput) => {
@@ -36,7 +36,7 @@ export const createNotificationForMany = async(
     type: NotificationType,
     message: string,
     refId?: string,
-    refModel?: "Connection" | "Project" | "ProjectJoinRequest",
+    refModel?: "Connection" | "Project" | "ProjectJoinRequest" | "Post",
 ) => {
     // Duplicate receivers hatao, aur khud ko bhi hatao (agar list me ho)
     const uniqueReceivers = [...new Set(receiverIds)].filter((id) => id !== senderId);
@@ -65,7 +65,7 @@ export const getMyNotifications = async (
   };
 
   const notifications = await Notification.find(filter)
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: -1, _id: -1 })
     .skip(skip)
     .limit(limit)
     .populate("senderId", "name");

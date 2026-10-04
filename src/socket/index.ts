@@ -5,7 +5,6 @@ import { Conversation } from "../models/conversation.model.js";
 import { markMessagesAsRead, sendMessage } from "../services/chat.service.js";
 import { env } from "../config/env.js";
 import { conversationIdSchema, sendMessageSchema } from "../validators/chat.validator.js";
-import { ApiError } from "../utils/apiError.util.js";
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -65,7 +64,12 @@ const io = new SocketIOServer(httpServer, {
 
     // Problem: A user could try to join any conversation by sending its ID.
     // Solution: Verify that the authenticated user is a participant before joining.
-    socket.on("join_conversation", async (payload: unknown) => {
+    socket.on(
+      "join_conversation",
+      async (
+       payload: unknown,
+       ack?: (response: { success: boolean; message?: string }) => void
+      ) => {
       const parsed = conversationIdSchema.safeParse(payload);
       if (!parsed.success) {
         socket.emit("error", { message: parsed.error.issues[0].message });
@@ -91,11 +95,13 @@ const io = new SocketIOServer(httpServer, {
         }
 
         socket.join(conversationId);
+        ack?.({ success: true });
 
         console.log(
           `👥 User ${socket.userId} joined conversation ${conversationId}`
         );
       } catch (error) {
+        console.error("❌ join_conversation error:", error);
         socket.emit("error", {
           message: "Unable to join conversation",
         });
